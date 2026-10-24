@@ -13,21 +13,23 @@ data "aws_availability_zones" "available" {
     values = ["opt-in-not-required"]
   }
 }
-
+# It gives the cluster name
 locals {
-  cluster_name = "education-eks-${random_string.suffix.result}"
+  cluster_name = "gmkdev-eks-${random_string.suffix.result}"
 }
 
+#it generates random string lenth of 8 characters to append to the cluster name
 resource "random_string" "suffix" {
   length  = 8
   special = false
 }
 
+#it creats a vpc and private and public subnets and enables nat gatway and dns hostnames and tags the subnets for kubernetes
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.8.1"
 
-  name = "education-vpc"
+  name = "gmkdev-vpc"
 
   cidr = "10.0.0.0/16"
   azs  = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -39,6 +41,7 @@ module "vpc" {
   single_nat_gateway   = true
   enable_dns_hostnames = true
 
+#it creates a inernal load balancer for private subnets and internet loand balancer for public subnets
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
   }
@@ -53,16 +56,18 @@ module "eks" {
   version = "20.8.5"
 
   cluster_name    = local.cluster_name
-  cluster_version = "1.36"
+  cluster_version = "1.33"
 
+#Getting access from the outside of aws
   cluster_endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
 
-  cluster_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
-    }
-  }
+#This is for the ebs storage purpose
+  #cluster_addons = {
+   # aws-ebs-csi-driver = {
+   #   service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+   # }
+ # }
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -72,9 +77,12 @@ module "eks" {
 
   }
 
+#it creates three node groups for the cluster with different instance types and sizes
+#The node internally creates autoscaling group and it creates the ec2 instances for the cluster
+
   eks_managed_node_groups = {
-    one = {
-      name = "node-group-1"
+    frontend = {
+      name = "frontend-node-group"
 
       instance_types = ["t3.small"]
 
@@ -83,13 +91,22 @@ module "eks" {
       desired_size = 2
     }
 
-    two = {
-      name = "node-group-2"
+    backend = {
+      name = "backend-node-group"
 
       instance_types = ["t3.small"]
 
       min_size     = 1
       max_size     = 2
+      desired_size = 1
+    }
+    database = {
+      name = "database-node-group"
+
+      instance_types = ["t3.medium"]
+
+      min_size     = 1
+      max_size     = 3
       desired_size = 1
     }
   }
