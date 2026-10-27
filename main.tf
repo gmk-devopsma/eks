@@ -15,7 +15,7 @@ data "aws_availability_zones" "available" {
 }
 # It gives the cluster name
 locals {
-  cluster_name = "gmkdev-eks-${random_string.suffix.result}"
+  cluster_name = "mkdev-eks-${random_string.suffix.result}"
 }
 
 #it generates random string lenth of 8 characters to append to the cluster name
@@ -29,7 +29,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.8.1"
 
-  name = "gmkdev-vpc"
+  name = "mkdev-vpc"
 
   cidr = "10.0.0.0/16"
   azs  = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -88,7 +88,7 @@ module "eks" {
 
       min_size     = 1
       max_size     = 3
-      desired_size = 2
+      desired_size = 1
     }
 
     backend = {
@@ -97,13 +97,13 @@ module "eks" {
       instance_types = ["t3.small"]
 
       min_size     = 1
-      max_size     = 2
+      max_size     = 3
       desired_size = 1
     }
     database = {
       name = "database-node-group"
 
-      instance_types = ["t3.medium"]
+      instance_types = ["t3.small"]
 
       min_size     = 1
       max_size     = 3
